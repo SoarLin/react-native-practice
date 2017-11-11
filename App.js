@@ -1,9 +1,11 @@
 import React, { Component } from 'react';
 import {
   Image,
+  FlatList,
   Platform,
   StyleSheet,
   ScrollView,
+  SectionList,
   Text,
   TextInput,
   View
@@ -52,14 +54,33 @@ class PostList extends Component {
   }
 }
 
+class ListItem extends Component {
+  constructor(props) {
+    super(props);
+  }
+
+  render() {
+    let tags = this.props.tags.map((tag) => tag).join(',');
+    return (
+      <View>
+        <Text style={{ marginTop: 10, fontSize: 16, fontWeight: '700'}}>{this.props.title}</Text>
+        <Text style={{ fontSize:12, color: '#ff00a0'}}>{this.props.link}</Text>
+        <Text style={{ fontSize:10, color: '#777' }}>{tags}</Text>
+      </View>
+    );
+  }
+}
+
 export default class App extends Component<{}> {
   constructor(props) {
     super(props);
     this.state = {
-      showText: ''
+      showText: '',
+      listData: []
     };
 
     this.transText2Pizza = this.transText2Pizza.bind(this);
+    this.searchBlog = this.searchBlog.bind(this);
   }
 
   setDisplayText(text) {
@@ -71,15 +92,47 @@ export default class App extends Component<{}> {
     this.setState({ showText: pizza });
   }
 
+  searchBlog() {
+    let keyword = this.state.showText;
+    fetch('https://soar.stco.tw/search/blog/articles/', {
+      method: 'POST',
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        keyword: keyword,
+        size: 5,
+      })
+    })
+    .then((response) => response.json())
+    .then((responseJson) => {
+      console.log(responseJson);
+      let tmp = [];
+      for (let i=0, max=responseJson.length; i < max; i++) {
+        tmp.push(responseJson[i]);
+      }
+      this.setState({ listData: tmp });
+      // return (
+      //   <FlatList
+      //     data={tmp}
+      //     renderItem={({item}) => <Text style={styles.item}>{item.title}</Text>}
+      //   />
+      // );
+    })
+    .catch((error) => {
+      console.error(error);
+    });
+  }
+
   render() {
     let pic = {
       url: 'https://www.appcoda.com.tw/wp-content/uploads/2015/04/react-native-1024x631.png'
     };
     let display = this.state.showText;
+    let flatlist_data = this.state.listData;
     return (
       <View style={styles.container}>
-        <PostList />
-
         <Text style={styles.welcome}>
           Welcome to React Native!
         </Text>
@@ -87,8 +140,21 @@ export default class App extends Component<{}> {
           style={{height: 40}}
           placeholder="Type some words..."
           onChangeText={(text) => this.setDisplayText(text)}
-          onSubmitEditing={this.transText2Pizza}/>
+          onSubmitEditing={this.searchBlog}/>
         <Text>{display}</Text>
+        <FlatList
+          data={flatlist_data}
+          keyExtractor={(item, index) => index}
+          renderItem={({item}) => (
+              <ListItem
+                title={item.title}
+                link={item.link}
+                tags={item.tags}
+              />
+            )}
+        />
+
+        {/*<PostList />*/}
         {/*<Banners picture={pic} />*/}
         <Text style={styles.instructions}>
           To get started, edit App.js
@@ -123,6 +189,20 @@ const styles = StyleSheet.create({
   image: {
     width: 180,
     height: 160
+  },
+  sectionHeader: {
+    paddingTop: 2,
+    paddingLeft: 10,
+    paddingRight: 10,
+    paddingBottom: 2,
+    fontSize: 14,
+    fontWeight: 'bold',
+    backgroundColor: 'rgba(247,247,247,1.0)',
+  },
+  item: {
+    padding: 10,
+    fontSize: 18,
+    height: 44,
   },
   welcome: {
     fontSize: 20,
